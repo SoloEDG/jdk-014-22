@@ -11,11 +11,15 @@ import { constrainPan } from "../lib/viewport";
 export function useReader(doc: Ref<ComicDocument>) {
   const location = ref<ReadingLocation>(firstLocation(doc.value)),
     mode = ref<ReadingMode>("page");
+  /** 用户手动导航的次数；恢复、对齐、缩放平移都不计入。 */
+  const moves = ref(0);
   const current = computed(() => resolveLocation(doc.value, location.value));
   function dispatch(command: ReaderCommand) {
     let at = { ...location.value };
-    if (command.type === "move")
+    if (command.type === "move") {
       at = advance(doc.value, at, command.delta, mode.value);
+      moves.value++;
+    }
     if (command.type === "chapter") {
       const c = doc.value.chapters.find((c) => c.id === command.id);
       at = {
@@ -26,13 +30,19 @@ export function useReader(doc: Ref<ComicDocument>) {
         x: 0,
         y: 0,
       };
+      moves.value++;
     }
     if (command.type === "panel") {
+      moves.value++;
       at.panelId = command.id;
       at.zoom = 1;
       at.x = at.y = 0;
     }
     if (command.type === "restore") at = { ...command.location };
+    if (command.type === "jump") {
+      moves.value++;
+      at = { ...command.location };
+    }
     location.value = normalize(doc.value, at);
   }
   function reconcile() {
@@ -54,5 +64,15 @@ export function useReader(doc: Ref<ComicDocument>) {
   function setMode(value: ReadingMode) {
     mode.value = value;
   }
-  return { location, mode, current, dispatch, reconcile, zoom, pan, setMode };
+  return {
+    location,
+    mode,
+    moves,
+    current,
+    dispatch,
+    reconcile,
+    zoom,
+    pan,
+    setMode,
+  };
 }

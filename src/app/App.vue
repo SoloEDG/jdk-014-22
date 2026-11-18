@@ -16,6 +16,7 @@ import { ChapterPanel } from "../features/chapters";
 import { ReaderStage, PanelStrip } from "../features/reader";
 import { AudioPanel } from "../features/audio";
 import { ProgressPanel } from "../features/progress";
+import { HistoryPanel } from "../features/history";
 import { useWorkspace } from "./workspace";
 const {
   doc,
@@ -24,6 +25,8 @@ const {
   library: l,
   chapters: c,
   audio: a,
+  history: h,
+  openDemo,
 } = useWorkspace();
 const current = r.current,
   at = r.location,
@@ -38,6 +41,10 @@ const chapterIndex = computed(
 function focus(id: string) {
   r.dispatch({ type: "panel", id });
   r.setMode("panel");
+}
+function beginRename(id: string) {
+  const chapter = doc.value.chapters.find((c) => c.id === id);
+  if (chapter) c.begin(id, chapter.title);
 }
 </script>
 <template>
@@ -81,16 +88,16 @@ function focus(id: string) {
           :draft="c.draft.value"
           :error="c.error.value"
           @select="r.dispatch({ type: 'chapter', id: $event })"
-          @rename="c.begin"
+          @rename="beginRename"
           @move="c.move"
           @remove="c.remove"
           @draft="c.draft.value = $event"
           @save="c.rename"
-        /><LibraryPanel
+        /><HistoryPanel :history="h" /><LibraryPanel
           :busy="l.busy.value"
           :message="l.message.value"
           @import="l.importFiles"
-          @reset="l.reset"
+          @reset="openDemo"
         />
         <div class="sidebar-footer">
           <PanelLeftClose :size="14" /> 你的私人漫画放映室 <span>v1.0</span>
@@ -171,13 +178,14 @@ function focus(id: string) {
           :status="status"
           @add="p.add"
           @remove="p.remove"
-          @restore="r.dispatch({ type: 'restore', location: $event })"
+          @restore="r.dispatch({ type: 'jump', location: $event })"
         />
         <div class="reading-tip">
           <span>✦ 阅读小贴士</span>
           <p>试试逐格模式，让画面与声音<br />带你走进故事的深处。</p>
-          <kbd>←</kbd><kbd>→</kbd> <small>切换画面</small><br /><kbd>Space</kbd>
-          <small>播放 / 暂停声景</small>
+          <kbd>Ctrl</kbd><kbd>Z</kbd> <small>撤销章节操作</small><br /><kbd
+            >Ctrl</kbd
+          ><kbd>Shift</kbd><kbd>Z</kbd> <small>重做</small>
         </div>
       </aside>
     </div>

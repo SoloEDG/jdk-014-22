@@ -1,32 +1,30 @@
-import { ref, type Ref } from "vue";
-import type { ComicDocument } from "../../../shared/document";
-import { renameChapter, moveChapter, deleteChapter } from "../lib/operations";
-export function useChapters(doc: Ref<ComicDocument>, changed: () => void) {
+import { ref } from "vue";
+import type { HistoryRuntime } from "../../history";
+export function useChapters(history: HistoryRuntime) {
   const editing = ref(""),
     draft = ref(""),
     error = ref("");
-  function begin(id: string) {
+  function begin(id: string, current: string) {
     editing.value = id;
-    draft.value = doc.value.chapters.find((c) => c.id === id)?.title ?? "";
+    draft.value = current;
+    error.value = "";
   }
   function rename() {
-    if (!renameChapter(doc.value, editing.value, draft.value)) {
-      error.value = "章节名需为 1–60 个字";
+    const result = history.renameChapter(editing.value, draft.value);
+    if (!result.ok) {
+      error.value = result.message;
       return;
     }
     editing.value = "";
     error.value = "";
-    changed();
   }
   function move(id: string, delta: number) {
-    if (moveChapter(doc.value, id, delta)) changed();
+    const result = history.moveChapter(id, delta);
+    error.value = result.ok ? "" : result.message;
   }
   function remove(id: string) {
-    if (!deleteChapter(doc.value, id)) {
-      error.value = "至少保留一个章节";
-      return;
-    }
-    changed();
+    const result = history.deleteChapter(id);
+    error.value = result.ok ? "" : result.message;
   }
   return { editing, draft, error, begin, rename, move, remove };
 }
